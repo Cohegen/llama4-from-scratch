@@ -85,3 +85,62 @@ def merge_pair(pair_to_merge,splits):
                 i += 1
         new_splits[tuple(new_symbols)] = freq # use the updated symbol list as the key
     return new_splits
+
+
+##BPE training intialization
+num_merges = 15
+merges = {}
+
+current_splits = word_splits.copy() #start with initial word splits
+
+print("\n Starting BPE merges:")
+print(f"Initial Splits: {current_splits}")
+print("-"*30)
+
+for i in range(num_merges):
+    print(f"\nMerge Iteration {i+1}/{num_merges}")
+
+    #calculating pair frequencies
+    pair_stats = get_pair_stats(current_splits)
+    if not pair_stats:
+        print("No more pairs to merge.")
+        break
+
+    #finding best pair
+    best_pair = max(pair_stats,key=pair_stats.get)
+    best_freq = pair_stats[best_pair]
+    print(f"Found Best Pair: {best_pair} with Frequency : {best_freq}")
+
+    #merge the best pair
+    current_splits = merge_pair(best_pair,current_splits)
+    new_token = best_pair[0] + best_pair[1]
+    print(f"Merging {best_pair} into '{new_token}'")
+    print(f"Splits after merge: {current_splits}")
+
+    #update vocabulary
+    vocab.append(new_token)
+    print(f"Updated Vocabluary: {vocab}")
+
+    # store merge rule
+    merges[best_pair] = new_token
+    print(f"Updated Merges: {merges}")
+
+    print("-"*30)
+
+
+# BPE Merges Complete 
+print("\n--- BPE Merges Complete ---")
+print(f"Final Vocabulary Size: {len(vocab)}")
+print("\nLearned Merges (Pair -> New Token):")
+# Pretty print merges
+for pair, token in merges.items():
+    print(f"{pair} -> '{token}'")
+
+print("\nFinal Word Splits after all merges:")
+print(current_splits)
+
+print("\nFinal Vocabulary (sorted):")
+# Sort for consistent viewing
+final_vocab_sorted = sorted(list(set(vocab))) # Use set to remove potential duplicates if any step introduced them
+print(final_vocab_sorted)
+
