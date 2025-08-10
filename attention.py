@@ -69,3 +69,47 @@ print(f"  value_states: {value_states.shape}")   # (batch_size, num_key_value_he
 num_key_value_groups = num_attention_heads // num_key_value_heads
 print(f"\nNum Key/Value Groups (Q heads per K/V head): {num_key_value_groups}")
 
+
+##implementing rotary positional embedding(RoPE)
+
+def sinple_rope_calculation(dim,max_seq_len,base=1000.0,device=None):
+    """Calculation simplified RoPE frequencies"""
+    inv_freq = 1.0 / (base **(torch.arange(0,dim,2,device=device).float()/ dim))
+    t = torch.arange(max_seq_len,device=device).type_as(inv_freq)
+    freqs = new_func(inv_freq,t)
+    emb = torch.cat((freqs,freqs))
+    freq_cos = emb.cos() #real part
+    freq_sin = emb.sin() # imaginary part
+    #combining the real and imaginary parts to from complex numbers
+    freqs_cis = torch.complex(freq_cos,freq_sin)
+    return freqs_cis
+
+def new_func(inv_freq,t):
+    freqs = torch.outer(t,inv_freq)
+    return freqs
+
+def apply_rotary_emb_torch(
+        xq:torch.Tensor, # Query tensor,shape (batch, num_heads, seq_len, head_dim)
+        xk: torch.Tensor,      # Key tensor, shape (batch, num_heads, seq_len, head_dim)
+        freqs_cis: torch.Tensor, # Precomputed complex rotations, shape (max_seq_len, head_dim)
+) -> Tuple[torch.Tensor,torch.Tensor]:
+    """Applies RoPE rotations to Q and K using torch complex numbers."""
+
+    #ensuring freq_cis is  one the right device (CPU/GPU)
+    freqs_cis = freqs_cis.to(xq.device)
+
+    #selecting the correct rotation vectors for current sequence positions
+    freqs_cis =freqs_cis[pos_ids]
+
+    #add a dimension for broadcasting across attention heads
+    freqs_cis = freqs_cis[:,None,:,:] # Now shape: (batch, 1, seq_len, head_dim), complex
+
+
+    #reshaping Q  and K to view adjacent pairs as complex numbers
+    xq_ = torch.view_as_complex(xq.float(*xq.shape[:-1],-1,2))
+    xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))
+
+    #selecting the necessary part of freq_cis for complex math
+
+    freqs_cis_broadcast = freqs_cis[...,:xq_.shape[-1]] #slices the last dim
+    
