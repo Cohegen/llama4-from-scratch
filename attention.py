@@ -1,115 +1,214 @@
-#import required libraries
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import math
-from typing import Tuple,Optional
+from typing import Tuple
 
+# ------------------------
+# Configuration parameters
+# ------------------------
+hidden_size = 128
+num_attention_heads = 16
+num_key_value_heads = 4
+head_dim = hidden_size // num_attention_heads
+max_position_embeddings = 256
+rope_theta = 10000.0
+attention_bias = False
+use_qk_norm = True
 
-#configuration
-hidden_size = 128 # dimensionality of the model's hidden states
-num_attention_heads = 16 # total number of query heads
-num_key_value_heads = 4 # number of key/value heads (for GQA)
-head_dim = hidden_size // num_attention_heads #dimension of each attention head
-max_pos_embedding = 256 #maximum sequence length the model expects
-rope_theta = 1000.0 # base for rotary position embedding frequency calculation
-rms_norm_eps = 1e-5 #epsilon for RMSNorm
-attention_bias = False #whether to use bias in Q(query)
-attention_dropout = 0.0 #dropout probability for attention weights
-use_qk_norm = True #whether to apply L2 normalization to Q(query) and K(key) before attention 
-
-#example input
-batch_size =2 
+# ------------------------
+# Dummy input tensors
+# ------------------------
+batch_size = 2
 sequence_length = 10
-hidden_states = torch.randn(batch_size,sequence_length,hidden_size)
-pos_ids = torch.arange(0,sequence_length).unsqueeze(0).repeat(batch_size,1)
 
-#simple casual mask (upper trianngular)
-attention_mask = torch.triu(torch.ones(sequence_length,sequence_length)*-torch.inf,diagonal=1)
-attention_mask = attention_mask.unsqueeze(0).unsqueenze(0) #shape: (1,1,sequence_length,sequence)
-attention_mask = attention_mask.expand(batch_size,1,-1,-1) #shape: (1,1,sequence_length,sequence)
+# Random hidden states simulating token embeddings
+hidden_states = torch.randn(batch_size, sequence_length, hidden_size)
 
-print("Configuration:")
-print(f"  hidden_size: {hidden_size}")
-print(f"  num_attention_heads: {num_attention_heads}")
-print(f"  num_key_value_heads: {num_key_value_heads}")
-print(f"  head_dim: {head_dim}")
+# Position IDs for each token in the sequence
+position_ids = torch.arange(0, sequence_length).unsqueeze(0).repeat(batch_size, 1)
 
-print("\nSample Input Shapes:")
-print(f"  hidden_states: {hidden_states.shape}")
-print(f"  position_ids: {pos_ids.shape}")
-print(f"  attention_mask: {attention_mask.shape}")
+# Create causal attention mask to prevent attending to future tokens
+attention_mask = torch.triu(torch.ones(sequence_length, sequence_length) * -torch.inf, diagonal=1)
+attention_mask = attention_mask.unsqueeze(0).unsqueeze(0).expand(batch_size, 1, -1, -1)
 
-
-# Q,K,V projection
-# Llama 4 uses Grouped-Query Attention (GQA). This means there are fewer K and V heads than Q heads. The `num_key_value_groups` tells us how many Q heads share the same K and V head. This reduces computation and memory requirements.
-
-# Define projection layers
+# ------------------------
+# Projection layers for Q, K, V, and output
+# ------------------------
 q_proj = nn.Linear(hidden_size, num_attention_heads * head_dim, bias=attention_bias)
 k_proj = nn.Linear(hidden_size, num_key_value_heads * head_dim, bias=attention_bias)
 v_proj = nn.Linear(hidden_size, num_key_value_heads * head_dim, bias=attention_bias)
 o_proj = nn.Linear(num_attention_heads * head_dim, hidden_size, bias=attention_bias)
 
-# Calculate projections
-query_states = q_proj(hidden_states)
-key_states = k_proj(hidden_states)
-value_states = v_proj(hidden_states)
+# ------------------------
+# Compute Q, K, V tensors
+# ------------------------
+query_states = q_proj(hidden_states).view(batch_size, sequence_length, num_attention_heads, head_dim).transpose(1, 2)
+key_states = k_proj(hidden_states).view(batch_size, sequence_length, num_key_value_heads, head_dim).transpose(1, 2)
+value_states = v_proj(hidden_states).view(batch_size, sequence_length, num_key_value_heads, head_dim).transpose(1, 2)
 
-# Reshape Q, K, V for multi-head attention
-# Target shape: (batch_size, num_heads, sequence_length, head_dim)
-query_states = query_states.view(batch_size, sequence_length, num_attention_heads, head_dim).transpose(1, 2)
-key_states = key_states.view(batch_size, sequence_length, num_key_value_heads, head_dim).transpose(1, 2)
-value_states = value_states.view(batch_size, sequence_length, num_key_value_heads, head_dim).transpose(1, 2)
+# ------------------------
+# Rotary Positional Embeddings (RoPE)
+# ------------------------
+def simple_rope_calculation(dim, max_seq_len, base=10000.0, device=None):
+    # Compute inverse frequency for sinusoidal components
+    inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2, device=device).float() / dim))
+    # Time positions for each token
+    t = torch.arange(max_seq_len, device=device).type_as(inv_freq)
+    freqs = torch.outer(t, inv_freq)
+    # Stack cosine and sine components
+    emb = torch.cat((freqs, freqs), dim=-1)
+    return torch.complex(emb.cos(), emb.sin())
 
-print("Projected Shapes:")
-print(f"  query_states: {query_states.shape}") # (batch_size, num_attention_heads, sequence_length, head_dim)
-print(f"  key_states: {key_states.shape}")     # (batch_size, num_key_value_heads, sequence_length, head_dim)
-print(f"  value_states: {value_states.shape}")   # (batch_size, num_key_value_heads, sequence_length, head_dim)
+def apply_rotary_emb_torch(xq: torch.Tensor, xk: torch.Tensor, freqs_cis: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    # Select frequencies corresponding to the token positions
+    freqs_cis = freqs_cis.to(xq.device)[position_ids]
+    freqs_cis = freqs_cis[:, None, :, :]  # Broadcast to match shape
+    # Convert to complex for rotation
+    xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))
+    xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))
+    freqs_cis_broadcast = freqs_cis[..., :xq_.shape[-1]]
+    # Apply rotation
+    rotated_xq = xq_ * freqs_cis_broadcast
+    rotated_xk = xk_ * freqs_cis_broadcast
+    # Convert back to real tensors
+    xq_out = torch.view_as_real(rotated_xq).flatten(3)
+    xk_out = torch.view_as_real(rotated_xk).flatten(3)
+    return xq_out.type_as(xq), xk_out.type_as(xk)
+
+# Compute RoPE embeddings and apply to Q, K
+freqs_cis = simple_rope_calculation(head_dim, max_position_embeddings, base=rope_theta, device=hidden_states.device)
+query_states_rope, key_states_rope = apply_rotary_emb_torch(query_states, key_states, freqs_cis)
+
+# ------------------------
+# Optional Q/K normalization
+# ------------------------
+class SimpleL2Norm(nn.Module):
+    def __init__(self, eps=1e-6):
+        super().__init__()
+        self.eps = eps
+    def forward(self, x):
+        return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+
+if use_qk_norm:
+    qk_norm = SimpleL2Norm()
+    query_states_final = qk_norm(query_states_rope)
+    key_states_final = qk_norm(key_states_rope)
+else:
+    query_states_final = query_states_rope
+    key_states_final = key_states_rope
+
+# ------------------------
+# Repeat K/V for multi-query or grouped-query attention
+# ------------------------
+def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
+    batch, num_key_value_heads, slen, head_dim = hidden_states.shape
+    if n_rep == 1:
+        return hidden_states
+    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 num_key_value_groups = num_attention_heads // num_key_value_heads
-print(f"\nNum Key/Value Groups (Q heads per K/V head): {num_key_value_groups}")
+key_states_repeated = repeat_kv(key_states_final, num_key_value_groups)
+value_states_repeated = repeat_kv(value_states, num_key_value_groups)
 
+# ------------------------
+# Scaled Dot-Product Attention
+# ------------------------
+attn_weights = torch.matmul(query_states_final, key_states_repeated.transpose(2, 3))
+attn_weights *= 1.0 / math.sqrt(head_dim)  # Scale by head dimension
+if attention_mask is not None:
+    causal_mask = attention_mask[:, :, :, :key_states_repeated.shape[-2]]
+    attn_weights += causal_mask
+attn_weights = nn.functional.softmax(attn_weights, dim=-1).to(query_states.dtype)
 
-##implementing rotary positional embedding(RoPE)
+# Weighted sum of values
+attn_output = torch.matmul(attn_weights, value_states_repeated)
 
-def sinple_rope_calculation(dim,max_seq_len,base=1000.0,device=None):
-    """Calculation simplified RoPE frequencies"""
-    inv_freq = 1.0 / (base **(torch.arange(0,dim,2,device=device).float()/ dim))
-    t = torch.arange(max_seq_len,device=device).type_as(inv_freq)
-    freqs = new_func(inv_freq,t)
-    emb = torch.cat((freqs,freqs))
-    freq_cos = emb.cos() #real part
-    freq_sin = emb.sin() # imaginary part
-    #combining the real and imaginary parts to from complex numbers
-    freqs_cis = torch.complex(freq_cos,freq_sin)
-    return freqs_cis
+# ------------------------
+# Final projection back to hidden size
+# ------------------------
+attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, sequence_length, hidden_size)
+final_attn_output = o_proj(attn_output)
 
-def new_func(inv_freq,t):
-    freqs = torch.outer(t,inv_freq)
-    return freqs
+# ------------------------
+# Wrap into a class for modular use
+# ------------------------
+class SimplifiedLlama4Attention(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        # Store configuration
+        self.hidden_size = config['hidden_size']
+        self.num_attention_heads = config['num_attention_heads']
+        self.num_key_value_heads = config['num_key_value_heads']
+        self.head_dim = self.hidden_size // self.num_attention_heads
+        self.num_key_value_groups = self.num_attention_heads // self.num_key_value_heads
+        self.max_position_embeddings = config['max_position_embeddings']
+        self.rope_theta = config['rope_theta']
+        self.attention_bias = config['attention_bias']
+        self.use_qk_norm = config['use_qk_norm']
 
-def apply_rotary_emb_torch(
-        xq:torch.Tensor, # Query tensor,shape (batch, num_heads, seq_len, head_dim)
-        xk: torch.Tensor,      # Key tensor, shape (batch, num_heads, seq_len, head_dim)
-        freqs_cis: torch.Tensor, # Precomputed complex rotations, shape (max_seq_len, head_dim)
-) -> Tuple[torch.Tensor,torch.Tensor]:
-    """Applies RoPE rotations to Q and K using torch complex numbers."""
+        # Linear projections
+        self.q_proj = nn.Linear(self.hidden_size, self.num_attention_heads * self.head_dim, bias=self.attention_bias)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=self.attention_bias)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=self.attention_bias)
+        self.o_proj = nn.Linear(self.num_attention_heads * self.head_dim, self.hidden_size, bias=self.attention_bias)
 
-    #ensuring freq_cis is  one the right device (CPU/GPU)
-    freqs_cis = freqs_cis.to(xq.device)
+        # Precompute RoPE frequencies
+        self.freqs_cis = simple_rope_calculation(self.head_dim, self.max_position_embeddings, base=self.rope_theta)
 
-    #selecting the correct rotation vectors for current sequence positions
-    freqs_cis =freqs_cis[pos_ids]
+        # Optional normalization for Q/K
+        if self.use_qk_norm:
+            self.qk_norm = SimpleL2Norm()
 
-    #add a dimension for broadcasting across attention heads
-    freqs_cis = freqs_cis[:,None,:,:] # Now shape: (batch, 1, seq_len, head_dim), complex
+    def forward(self, hidden_states, attention_mask, position_ids):
+        bsz, seq_len, _ = hidden_states.shape
 
+        # Q, K, V projections
+        q = self.q_proj(hidden_states).view(bsz, seq_len, self.num_attention_heads, self.head_dim).transpose(1, 2)
+        k = self.k_proj(hidden_states).view(bsz, seq_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(hidden_states).view(bsz, seq_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
 
-    #reshaping Q  and K to view adjacent pairs as complex numbers
-    xq_ = torch.view_as_complex(xq.float(*xq.shape[:-1],-1,2))
-    xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))
+        # Apply RoPE to Q and K
+        q_rope, k_rope = apply_rotary_emb_torch(q, k, self.freqs_cis.to(hidden_states.device))
 
-    #selecting the necessary part of freq_cis for complex math
+        # Optional normalization
+        if self.use_qk_norm:
+            q_final = self.qk_norm(q_rope)
+            k_final = self.qk_norm(k_rope)
+        else:
+            q_final, k_final = q_rope, k_rope
 
-    freqs_cis_broadcast = freqs_cis[...,:xq_.shape[-1]] #slices the last dim
-    
+        # Repeat K and V for multi-head attention compatibility
+        k_rep = repeat_kv(k_final, self.num_key_value_groups)
+        v_rep = repeat_kv(v, self.num_key_value_groups)
+
+        # Compute scaled dot-product attention
+        attn_weights = torch.matmul(q_final, k_rep.transpose(2, 3)) * (1.0 / math.sqrt(self.head_dim))
+        if attention_mask is not None:
+            attn_weights += attention_mask[:, :, :, :k_rep.shape[-2]]
+
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1).to(q.dtype)
+
+        # Weighted sum of values
+        attn_output = torch.matmul(attn_weights, v_rep).transpose(1, 2).contiguous().view(bsz, seq_len, self.hidden_size)
+
+        # Output projection
+        return self.o_proj(attn_output), attn_weights
+
+# ------------------------
+# Test the class
+# ------------------------
+config_dict = {
+    'hidden_size': hidden_size,
+    'num_attention_heads': num_attention_heads,
+    'num_key_value_heads': num_key_value_heads,
+    'max_position_embeddings': max_position_embeddings,
+    'rope_theta': rope_theta,
+    'attention_bias': attention_bias,
+    'use_qk_norm': use_qk_norm,
+}
+
+simplified_attn_module = SimplifiedLlama4Attention(config_dict)
+final_output_simplified, final_weights_simplified = simplified_attn_module(hidden_states, attention_mask, position_ids)
+print("Output shape:", final_output_simplified.shape)
+print("Attention weights shape:", final_weights_simplified.shape)
