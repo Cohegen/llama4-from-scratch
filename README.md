@@ -15,4 +15,4 @@ This repository provides a step-by-step implementation of the LLaMA (Large Langu
 - **Train & Evaluate:** Scripts provided for training the model on sample data and evaluating its performance.
 
 ##Disclaimer
-The feedforward, training, and evaluation scripts are still under development. Additionally, 'attention.py, tokenizer.py', and other related scripts have not yet been synchronized, so functionality may be incomplete or unstable.
+-The feedforward, training, and evaluation scripts are still under development. Additionally, 'attention.py, tokenizer.py', and other related scripts have not yet been synchronized, so functionality may be incomplete or unstable.
