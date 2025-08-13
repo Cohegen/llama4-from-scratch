@@ -14,5 +14,5 @@ This repository provides a step-by-step implementation of the LLaMA (Large Langu
 - **Educational Documentation:** Inline comments and markdown files explain the theory and implementation details.
 - **Train & Evaluate:** Scripts provided for training the model on sample data and evaluating its performance.
 
-## Disclaimer
-The feedforward, training, and evaluation scripts are still under development. Additionally, 'attention.py, tokenizer.py', and other related scripts have not yet been synchronized, so functionality may be incomplete or unstable.
+## Dataset
+The dataset used here is a `txt` file obtain from project gutenberg, this file is a txt file about Divine Comedy by Dante.
