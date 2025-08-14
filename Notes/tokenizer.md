@@ -12,7 +12,8 @@ A raw sentence, for example:
 ## Output:
 A sequence of integers that correspond to tokens in the tokenizer's vocabulary.
 The process of tokenization is shown in the diagram below:
-! [Output Example](../assets/tokenization.png)
+![Output Example](../assets/tokenization.png)
+
 
 
 
