@@ -74,8 +74,26 @@ The code implemetation of Byte Pair Encoding is in `src/tokenizer.py`.
           
          num_merges=15
 
-       s
+      - Each merge creates a merge rule:
+         ```
+         ('o','o') ---> 'oo'
+         ('oo','d') --> 'ood'
+
+      - These rules are stores in `merges` and later used for encoding new text.
+
+7. Stopping Criteria
+   - The algorithm stops when:
+     - It reaches the `num_merges` limit.
+     - Or no more symbol pairs(i.e all words are a single token).
+
+8. Final Vocabulary
+   - At the end, the vocabulary contains:
+      - Orinal characters
+      - End-of-word token
+      - All merged tokens discovered during training
+   - The vocabularycan now be used totokenize unseen text using learned merges.
          
+
 
 
 
