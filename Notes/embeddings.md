@@ -15,4 +15,5 @@
 
 ![Output Example](../assets/2-tokens.png)
 ![Output Example](../assets/3-tokenvectors.png)
+![Output Example](../assets/1-coordinateTokens.png)
 
