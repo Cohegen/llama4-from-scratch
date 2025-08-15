@@ -1,6 +1,6 @@
 # Embeddings
 ## Prerequisites
- - It is recommended that you have gone through the `tokenization.md` file
+ - It is recommended that you have gone through the `tokenizer.md` file
 
 ## Overview
 - So far, we’ve covered the process of tokenization — from having raw text, to defining tokenization rules, and finally assigning each character, subword, or word in a sentence an integer ID to represent it.
@@ -27,6 +27,11 @@
 Below is an image of the embedding matrix. Each word corresponds to a specific vector, where each has no reference to its context. It is the role of the attention block to update a word's vector with its context (further details about attention block is present in the `attention_mechanism.md`file).
 
 ![Output Example](../assets/10-embeddingmatrix.png)
+
+## Positional Encoders
+Positional encoding provides info about the order of tokens in  a sequence, i.e where a specific word is positioned in a sentence.
+A fixed positional encoding vector is added to each words's embedding.
+There various type of postional encoding, for example relative,absolute and rotary positional encoding.
 
 
 
