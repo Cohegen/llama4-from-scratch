@@ -17,3 +17,17 @@
 ![Output Example](../assets/3-tokenvectors.png)
 ![Output Example](../assets/1-coordinateTokens.png)
 
+## Embeddings
+- Words that appear in the same context often have similar meanings.
+- We follow the following steps in embedding tokens:
+  1. Tokenization : First, we split the input into small units called tokens. Each token is given an integer ID. These IDs are then converted into vectors in a mathematical space, where similar tokens are placed close to each other.
+ 2. Tokenization Rules: The model already knows rules of tokenization which it learned in the `src/tokenization.py` script.
+ 3. Embedding Matrix: An embedding matrix is created, where each token corresponds to a unique vector(one row in the matrix). The dimensions of the embedding space can very high, e.g 12,288. Theoritically, E(prince)- E(princess) ~= E(lion) - E(lioness).The dot product of two vectors, is measure of how well they align. In this case, this acts as a measure of similarity between words.
+
+Below is an image of the embedding matrix. Each word corresponds to a specific vector, where each has no reference to its context. It is the role of the attention block to update a word's vector with its context (further details about attention block is present in the `attention_mechanism.md`file).
+
+![Output Example](../assets/10-embeddingmatrix.png)
+
+
+
+
