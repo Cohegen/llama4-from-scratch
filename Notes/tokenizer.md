@@ -57,8 +57,26 @@ The code implemetation of Byte Pair Encoding is in `src/tokenizer.py`.
         - `("o","d")`
         - `("d","</w>")`
 5. Pair Merging
-   -
-     
+   - The function `merge_pair(pair_to_merge,splits)`,finds all occurences of the most frequent pairs and replaces them with a single new token.
+   - This:
+      1. Shrinks the length of words in terms of tokens.
+      2. Adds new combined tokens to the vocabulary.
+   - Example:
+      - Merging `("o","o")` ---> `"oo"`
+      - `"wood"` becomes: `("w","oo","d","</w>")`
+
+6. Iterative Merging
+   - BPE is an iterative algorithm, so it follows the following steps:
+       1. Couting pair frequencies
+       2.  Merging the most frequent pair.
+       3.  Updating vocabulary
+       4.  Repeating for a fixed number of merges(`num_merges`) or until no pairs remain.
+          
+         num_merges=15
+
+       s
+         
+
 
 
 
