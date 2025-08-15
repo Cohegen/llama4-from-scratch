@@ -12,6 +12,7 @@
 - These vectors:
    - encodes the meaning of that token.
    - Can be thought of as coordinates in a high-dimensional space, where tokens with similar meaning are positioned close to one another.
+
 ![Output Example](../assets/2-tokens.png)
 
 
