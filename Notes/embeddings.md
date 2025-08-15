@@ -32,7 +32,19 @@ Below is an image of the embedding matrix. Each word corresponds to a specific v
 Positional encoding provides info about the order of tokens in  a sequence, i.e where a specific word is positioned in a sentence.
 A fixed positional encoding vector is added to each words's embedding.
 There various type of postional encoding, for example relative,absolute and rotary positional encoding.
+1. Absolute Positional Embeddings
+   - Suppose we have an embedding representing a word. To encode its position, we use another of identical dimensionality, where each vector uniquely represents a postion in the sentence. For example, a specific vector is designated for the second word in a sentence.
 
-
+2. Relative Positional Embeddings
+   - Let's use a sentence like "I love deep learning".
+   - The model learns the distance between tokens, not fixed positions.
+   - For example:
+      - From "I" to "love" --> distance + 1
+      - From "I" to "learning" --> distance + 3
+   - This helps th model focus on the relationships rather than fixed spots.
+  
+3. Rotary Positional Embedding(RoPE)
+   - See the `RoPe.md` file where I have clearly explained rotary positional embeddings.
+     
 
 
