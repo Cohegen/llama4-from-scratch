@@ -97,5 +97,11 @@ The code implementation of Byte Pair Encoding is in `src/tokenizer.py`.
      - All merged tokens discovered during training
    - The vocabulary can now be used to tokenize unseen text using learned merges.
 
+9. Key Takeaways
+    - Why BPE works : It learns frequent subwords units so rare words can be split into common chunks, reducing the number of out-of-vocabulary tokens.
+    - End-of-word tokens: Preserves word boundaries.
+    - Greedy merging: Always merges  the most frequent pair at each step.
+    - Result: Compact vocabulary that handles common and rare words efficiently.
+
 
 
