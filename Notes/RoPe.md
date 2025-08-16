@@ -28,15 +28,16 @@ For instance, the vector is rotated by theta for the first position, 2theta for 
 
 Taking the sentence : "The pig chased the dog"
 - Where :
-   | Token    | Position $p$ |
-| -------- | ------------ |
-| The        | 0            |
-| pig     | 1            |
-| chased     | 2            |
-| the  | 3            |
-| dog | 4       |
+| Token  | Position \$p\$ |
+| ------ | -------------- |
+| The    | 0              |
+| pig    | 1              |
+| chased | 2              |
+| the    | 3              |
+| dog    | 4              |
 
    
+
 
 
 
