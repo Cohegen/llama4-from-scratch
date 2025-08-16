@@ -36,7 +36,17 @@ Taking the sentence : "The pig chased the dog"
 | the    | 3              |
 | dog    | 4              |
 
+-Each token in our example sentence has a postion `p`.
+- We first map these tokens into their respective query and key vectors that have dimension `d`, we group them in into 2D pairs:
+   - For example:
+      - If d = 8: (q0,q1),(q2,q3),(q4,q5),(q6,q7)
+      - The rotation angle for the i-th pair is :
+          - $$
+\theta_{p,i} = \frac{p}{10000^{2i/d}}
+$$
+
    
+
 
 
 
