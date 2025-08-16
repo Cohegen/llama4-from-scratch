@@ -27,7 +27,7 @@ For instance, the vector is rotated by theta for the first position, 2theta for 
 ![Output example:](../assets/RoPE-Theta-Rotation-Formula.png)
 
 Taking the sentence : "The pig chased the dog"
-- Where :
+
 | Token  | Position \$p\$ |
 | ------ | -------------- |
 | The    | 0              |
@@ -37,6 +37,7 @@ Taking the sentence : "The pig chased the dog"
 | dog    | 4              |
 
    
+
 
 
 
