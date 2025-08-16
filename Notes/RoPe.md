@@ -16,5 +16,17 @@ Take for example: a two-dimensional word vector for the token "dog" in the above
 To encode its position in a sentence, RoPe rotates this vector.
 The angle of rotation (theta) is proportional to the word's postion in the sentence.
 For instance, the vector is rotated by theta for the first position, 2theta for the second and so on till the last token.
-This approach comes with benefits
+
+## Benefits of RoPE.
+1. Relative Postional Awareness : unlike absolute postional embeddings, RoPe naturally encodes relative postions between tokens. This is crucial as it makes it easier for models like transfromers to generalize across different sequence lengths.
+2. Better generalization: because relative distance between tokens is preserved, RoPe improves generalization to unseen text lengths and domains, comapred to absolute encodings.
+3. Efficiency : RoPe doesn't require large embedding tables (like learned absolute embeddings). Instead,it uses simple sinusoidal functions and rotations, which computationally light.
+4. Stability of vectors: Adding tokens at the end of a sentence doesn't affesct the vectors for words at the beginning, facilitatig effecient caching.
+
+## Formulaes we use in RoPe
+![Output example:](../assets/RoPE-Rotation-Formula.png)
+
+
+
+
 
