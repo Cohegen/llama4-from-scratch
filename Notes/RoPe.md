@@ -24,7 +24,8 @@ For instance, the vector is rotated by theta for the first position, 2theta for 
 4. Stability of vectors: Adding tokens at the end of a sentence doesn't affesct the vectors for words at the beginning, facilitatig effecient caching.
 
 ## Formulaes we use in RoPe
-![Output example:](../assets/RoPE-Rotation-Formula.png)
+![Output example:](../assets/RoPE-Theta-Rotation-Formula.png)
+
 
 
 
