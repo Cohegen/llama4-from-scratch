@@ -58,8 +58,19 @@ Consider the sentence: "The pig chased the dog"
   - i --> which 2D pair we're rotating
   - d --> full vector dimension
 - This is the same frequency scaling trick from `sinusoidal embeddings`.
+ 3.Apply the rotation for each token
+  - For each 2D pair, we apply the rotation matrix in the formula in the diagram above.
+  - Example for p = 2 ("pig"):
+      - For first pair (i = 0): theta = 2/10000^0
+      - For second pair (i=1) : smaller theta
+      - And so on , higher-dimensional pairs rotate slower.
+4.Do this seperately for Q and K
+  - Quey for token "pig" gets rotated by angles for p=2
+  - Key for token "pig" gets rotated by same anles for p = 2
+
 
 RoPE's core idea is to apply these rotations to the vector pairs, encoding positional information directly into the attention mechanism and thus improving both efficiency and contextual awareness in transformer architectures.
+
 
 
 
