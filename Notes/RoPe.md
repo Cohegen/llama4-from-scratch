@@ -72,20 +72,7 @@ Consider the sentence: "The pig chased the dog"
 
 1. **Compute the rotation angle for each pair:**  
    For each 2D pair $(x, y)$ in the query or key vector, the rotated values are:
-   $$
-   \begin{pmatrix}
-   x' \\
-   y'
-   \end{pmatrix} =
-   \begin{pmatrix}
-   \cos(\theta_{p,i}) & -\sin(\theta_{p,i}) \\
-   \sin(\theta_{p,i}) &  \cos(\theta_{p,i})
-   \end{pmatrix}
-   \begin{pmatrix}
-   x \\
-   y
-   \end{pmatrix}
-   $$
+  
    This rotates the pair by the computed angle, encoding position directly into the representation.
 
 2. **Apply this rotation separately to Query and Key vectors:**  
@@ -105,3 +92,4 @@ RoPE has become a standard positional encoding technique in many large language 
 ---
 
 RoPE's core idea is to apply these rotations to the vector pairs, encoding positional information directly into the attention mechanism and thus improving both efficiency and contextual awareness in transformer models. It is a simple yet powerful modification that helps models generalize better and handle longer contexts.
+
