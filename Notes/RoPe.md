@@ -1,59 +1,60 @@
 ## Rotary Positional Embeddings
 
-## Overview
-Rotary positional embedding represents a new approach in encoding positional information.
-Traditional methods like absolute or relative, come with their limitations.
-Absolute assign a unique vector to each position, which doesn't scale well and fails to capture relative positions effectively.
-Relative embeddings, focus on the distance between tokens, enhancing the model's understanding of token relationships but complcating the model architecture.
-Rotary Positional Embeddings (RoPe) combines the strengths of both, that is, it encodes positional information in a way that allows the model to understand both the absolute postion of tokens and their relative distances.
-This is achieved through a rotation in the embedding space.
+### Overview
 
-# How RoPe works
+Rotary positional embeddings (RoPE) are an innovative method for encoding positional information in transformer models. Traditional approaches—absolute and relative positional embeddings—each have their limitations. Absolute embeddings assign a unique vector to each position, which does not scale well and fails to capture relative relationships between tokens. Relative embeddings focus on token distances, enhancing relational understanding but often complicating model architecture.
+
+RoPE combines the strengths of both approaches by encoding positional information through rotation in the embedding space. This allows the model to simultaneously grasp both the absolute position of tokens and their relative relationships.
+
+### How RoPE Works
+
 ![Output example:](../assets/rope_example.webp)
 
-RoPe introduces a concept, whereby, instead of adding a positional vector, it applies a rotation to the word vector.
-Take for example: a two-dimensional word vector for the token "dog" in the above diagram.
-To encode its position in a sentence, RoPe rotates this vector.
-The angle of rotation (theta) is proportional to the word's postion in the sentence.
-For instance, the vector is rotated by theta for the first position, 2theta for the second and so on till the last token.
+Instead of simply adding a positional vector, RoPE applies a rotation to each word's embedding vector. For example, consider a two-dimensional word vector for the token "dog" (as in the diagram above). To encode its position, RoPE rotates this vector by an angle proportional to the token's position in the sentence:
 
-## Benefits of RoPE.
-1. Relative Postional Awareness : unlike absolute postional embeddings, RoPe naturally encodes relative postions between tokens. This is crucial as it makes it easier for models like transfromers to generalize across different sequence lengths.
-2. Better generalization: because relative distance between tokens is preserved, RoPe improves generalization to unseen text lengths and domains, comapred to absolute encodings.
-3. Efficiency : RoPe doesn't require large embedding tables (like learned absolute embeddings). Instead,it uses simple sinusoidal functions and rotations, which computationally light.
-4. Stability of vectors: Adding tokens at the end of a sentence doesn't affesct the vectors for words at the beginning, facilitatig effecient caching.
+- The angle of rotation (θ) is proportional to the token's position:  
+  - For the first position: θ  
+  - For the second position: 2θ  
+  - ...and so on, up to the last token.
 
-## Formulaes we use in RoPe
+### Benefits of RoPE
+
+1. **Relative Positional Awareness:**  
+   Unlike absolute embeddings, RoPE naturally encodes relative positions between tokens. This is crucial for models like transformers, enabling them to generalize better across varying input lengths.
+
+2. **Improved Generalization:**  
+   By preserving relative distances, RoPE helps models generalize to unseen text lengths and domains more effectively than absolute positional encodings.
+
+3. **Efficiency:**  
+   RoPE does not require large embedding tables as with learned absolute embeddings. Instead, it uses simple sinusoidal functions and rotations, making it computationally light.
+
+4. **Stability:**  
+   Adding tokens at the end of a sentence does not affect the vectors for words at the beginning, which facilitates efficient caching and incremental processing.
+
+### RoPE Formulation
+
 ![Output example:](../assets/RoPE-Theta-Rotation-Formula.png)
 
-Taking the sentence : "The pig chased the dog"
+Consider the sentence: "The pig chased the dog"
 
-| Token  | Position \$p\$ |
-| ------ | -------------- |
-| The    | 0              |
-| pig    | 1              |
-| chased | 2              |
-| the    | 3              |
-| dog    | 4              |
+| Token   | Position $p$ |
+| ------- | ------------ |
+| The     | 0            |
+| pig     | 1            |
+| chased  | 2            |
+| the     | 3            |
+| dog     | 4            |
 
--Each token in our example sentence has a postion `p`.
-- We first map these tokens into their respective query and key vectors that have dimension `d`, we group them in into 2D pairs:
-   - For example:
-      - If d = 8: (q0,q1),(q2,q3),(q4,q5),(q6,q7)
-      - The rotation angle for the i-th pair is :
-          - $$
-\theta_{p,i} = \frac{p}{10000^{2i/d}}
-$$
+- Each token has a position $p$.
+- Tokens are mapped into their respective query and key vectors of dimension $d$, grouped into 2D pairs:
+    - Example for $d = 8$: $(q_0, q_1), (q_2, q_3), (q_4, q_5), (q_6, q_7)$
+- The rotation angle for the $i$-th pair is calculated as:
 
-   
+  $$
+  \theta_{p,i} = \frac{p}{10000^{2i/d}}
+  $$
 
+---
 
-
-
-
-
-
-
-
-
+RoPE's core idea is to apply these rotations to the vector pairs, encoding positional information directly into the attention mechanism and thus improving both efficiency and contextual awareness in transformer architectures.
 
