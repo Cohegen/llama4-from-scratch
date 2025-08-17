@@ -53,8 +53,12 @@ Consider the sentence: "The pig chased the dog"
   $$
   \theta_{p,i} = \frac{p}{10000^{2i/d}}
   $$
-
----
+-Here:
+  - $p --> token's position
+  - $i --> which 2D pair we're rotating
+  - $d --> full vector dimension
+- This is the same frequency scaling trick from `sinusoidal embeddings`.
 
 RoPE's core idea is to apply these rotations to the vector pairs, encoding positional information directly into the attention mechanism and thus improving both efficiency and contextual awareness in transformer architectures.
+
 
